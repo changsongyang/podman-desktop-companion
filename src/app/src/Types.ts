@@ -74,7 +74,8 @@ export enum ServiceEngineType {
   native = "native",
   remote = "remote",
   wsl = "virtualized.wsl",
-  lima = "virtualized.lima"
+  lima = "virtualized.lima",
+  hypervisor = "virtualized.hypervisor",
 }
 export interface SystemConnection {
   Identity: string;
@@ -87,7 +88,6 @@ export interface SystemEnvironment {
   program: Program;
   running: boolean;
   system: SystemInfo;
-
   engine: ServiceEngineType;
 }
 export interface SystemStartInfo {

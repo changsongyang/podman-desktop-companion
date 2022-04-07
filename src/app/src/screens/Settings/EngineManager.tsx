@@ -16,7 +16,7 @@ const RestrictedTo: React.FC<{ platform: Platforms }> = ({ platform }) => {
   const platformsMap: { [key: string]: { icon: string; title: string } } = {
     [Platforms.Linux]: {
       icon: mdiLinux,
-      title: t("Only on Linux"),
+      title: t("For Linux"),
     },
     [Platforms.Windows]: {
       icon: mdiMicrosoftWindows,
@@ -148,10 +148,96 @@ const LIMAVirtualizationEngineSettings: React.FC<{disabled?: boolean}> = ({ disa
   );
 };
 
+const HypervisorVirtualizationEngineSettings: React.FC<{disabled?: boolean}> = ({ disabled }) => {
+  const { t } = useTranslation();
+  const native = useStoreState((state) => state.native);
+  const platform = useStoreState((state) => state.environment.platform);
+  const isMac = platform === Platforms.Mac;
+  const [programPaths, setProgramPaths] = useState<{ [key: string]: any }>({});
+  const programSetPath = useStoreActions((actions) => actions.settings.programSetPath);
+  const program = {
+    name: "podman",
+    path: ""
+  };
+  const onProgramSelectClick = useCallback(
+    async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
+      const sender = e.currentTarget as HTMLElement;
+      const field = sender?.closest(".AppSettingsField");
+      const program = field?.getAttribute("data-program-name");
+      const result = await Native.getInstance().openFileSelector();
+      if (result) {
+        const filePath = result?.filePaths[0];
+        if (!result.canceled && filePath && program) {
+          try {
+            const newProgram = await programSetPath({ name: "lima", path: filePath });
+            console.debug("Program updated", newProgram);
+            setProgramPaths((prev) => ({ ...prev, [program]: filePath }));
+          } catch (error) {
+            console.error("Unable to change program path", error);
+            Notification.show({ message: t("Unable to change program path"), intent: Intent.DANGER });
+          }
+        }
+      } else {
+        console.error("Unable to open file dialog");
+      }
+    },
+    [programSetPath, setProgramPaths, t]
+  );
+  const onProgramPathChange = useCallback(
+    (event: React.FormEvent<HTMLInputElement>) => {
+      const sender = event.currentTarget;
+      const field = sender?.closest(".AppSettingsField");
+      const program = field?.getAttribute("data-program-name");
+      if (program) {
+        setProgramPaths({ ...programPaths, [program]: sender.value });
+      }
+    },
+    [programPaths]
+  );
+  return (
+    <div className="VirtualizationEngineSettings" data-engine="hypervisor">
+      {isMac ? (
+        <ControlGroup vertical={false}>
+          <InputGroup
+            fill
+            id={`${program.name}_path`}
+            readOnly={native}
+            placeholder={"..."}
+            value={programPaths[program.name] || program.path}
+            disabled={disabled}
+            onChange={onProgramPathChange}
+          />
+          {native ? (
+            <Button
+              icon={IconNames.LOCATE}
+              text={t("Select")}
+              title={t("Select program")}
+              intent={Intent.PRIMARY}
+              disabled={disabled}
+              onClick={onProgramSelectClick}
+            />
+          ) : (
+            <Button icon={IconNames.TICK} title={t("Accept")} />
+          )}
+        </ControlGroup>
+      ) : (
+        <RestrictedTo platform={Platforms.Mac} />
+      )}
+    </div>
+  );
+};
+
 export interface SystemServiceEngineManagerProps {}
 
 export const SystemServiceEngineManager: React.FC<SystemServiceEngineManagerProps> = () => {
   const { t } = useTranslation();
+  const serviceEngineTypes = [
+    { engine: ServiceEngineType.native, label: "Native", active: false, enabled: false },
+    { engine: ServiceEngineType.hypervisor, label: "Hypervisor", active: false, enabled: false },
+    { engine: ServiceEngineType.wsl, label: "WSL", active: false, enabled: false },
+    { engine: ServiceEngineType.lima, label: "Lima", active: false, enabled: false },
+    { engine: ServiceEngineType.remote, label: "Remote", active: false, enabled: false },
+  ];
   const platform = useStoreState((state) => state.environment.platform);
   const connections = useStoreState((state) => state.environment.connections);
   const engine = useStoreState((state) => state.environment.engine);
@@ -167,6 +253,35 @@ export const SystemServiceEngineManager: React.FC<SystemServiceEngineManagerProp
         onChange={onEngineChange}
         selectedValue={engine}
       >
+        {serviceEngineTypes.map((it) => {
+          let restrict;
+          let disabled = false;
+          if (it.engine === ServiceEngineType.native) {
+            if (platform === Platforms.Mac || platform === Platforms.Windows) {
+              disabled = true;
+            }
+          } else if (it.engine === ServiceEngineType.lima) {
+            restrict = <RestrictedTo platform={Platforms.Mac} />;
+          } else if (it.engine === ServiceEngineType.wsl) {
+            restrict = <RestrictedTo platform={Platforms.Windows} />;
+            if (platform === Platforms.Mac) {
+              disabled = true;
+            }
+          }
+          return (
+            <Radio
+              key={it.engine}
+              className="AppSettingsField"
+              disabled={disabled}
+              labelElement={<RadioLabel text={it.label} />}
+              value={it.engine}
+              checked={engine === ServiceEngineType.native}
+            >
+             {restrict}
+            </Radio>
+          );
+        })}
+        {/*
         <Radio
           className="AppSettingsField"
           labelElement={<RadioLabel text={t("Remote with")} />}
@@ -206,10 +321,20 @@ export const SystemServiceEngineManager: React.FC<SystemServiceEngineManagerProp
           disabled={platform !== Platforms.Mac}
           labelElement={<RadioLabel text={t("Lima")} />}
           value="virtualized.lima"
-          checked={engine === ServiceEngineType.lima}
+          checked={engine === ServiceEngineType.hypervisor}
         >
           <LIMAVirtualizationEngineSettings disabled={engine !== ServiceEngineType.lima} />
         </Radio>
+        <Radio
+          className="AppSettingsField"
+          disabled={!(platform in [Platforms.Windows, Platforms.Mac])}
+          labelElement={<RadioLabel text={t("Hypervisor")} />}
+          value="virtualized.hypervisor"
+          checked={engine === ServiceEngineType.hypervisor}
+        >
+          <HypervisorVirtualizationEngineSettings disabled={engine !== ServiceEngineType.hypervisor} />
+        </Radio>
+        */}
       </RadioGroup>
     </div>
   );

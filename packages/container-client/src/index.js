@@ -13,30 +13,9 @@ const { exec, exec_launcher, withClient } = require("@podman-desktop-companion/e
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
 const isREMOTE = () => electronConfig.get('engine', '') ===  "remote";
 const isNATIVE = () => electronConfig.get('engine', '') ===  "native";
+const isLIMA = () => electronConfig.get('engine', '') ===  "virtualized.lima";
 const isWSL = () => electronConfig.get('engine', '') ===  "virtualized.wsl";
-const isLIMA = (skipCache) => {
-  const preferred = electronConfig.get('engine', '');
-  if (preferred) {
-    logger.debug('LIMA environment preferred from user configuration, path is:', preferred);
-    return preferred === "virtualized.lima";
-  }
-  // Detect if lima is available
-  if (os.type() === 'Darwin') {
-    const info = spawnSync('which', ['lima'], { encoding: 'utf8' });
-    if (info.error) {
-      logger.error("`lima` detection failed, error:", info.stderr);
-    } else {
-      logger.debug("`lima` detection finished, path is:", info.stdout);
-      const hasLima = !!info.stdout;
-      if (hasLima && !skipCache) {
-        logger.debug("`lima` detection - path cached in:", info.stdout);
-        electronConfig.set('engine', 'virtualized.lima');
-      }
-      return hasLima;
-    }
-  }
-  return false;
-};
+const isHypervisor = () => electronConfig.get('engine', '') ===  "virtualized.hypervisor";
 
 class ResultError extends Error {
   constructor(message, data, warnings) {
@@ -54,6 +33,8 @@ function getEngine() {
     engine = 'virtualized.wsl';
   } else if (isLIMA()) {
     engine = 'virtualized.lima';
+  } else if (isHypervisor()) {
+    engine = 'virtualized.hypervisor';
   }
   return electronConfig.get('engine', engine);
 }
@@ -79,7 +60,11 @@ async function getProgramPath() {
         result = isWSL() ? await exec("which", ["podman"], { useWSL: true }) : await exec_launcher("where", ["podman.exe"]);
         break;
       case 'Darwin':
-        result = isLIMA() ? await exec("which", ["podman"], { useLIMA: true }) : await exec_launcher("which", ["podman"]);
+        if (isHypervisor()) {
+          result = await exec_launcher("which", ["podman"]);
+        } else if (isLIMA()) {
+          result = await exec("which", ["podman"], { useLIMA: true });
+        }
         break;
       default:
         break;
@@ -146,6 +131,10 @@ async function getSystemInfo() {
 function getApiUnixSocketPath() {
   if (isLIMA()) {
     return path.join(process.env.HOME, ".lima/podman/sock/podman.sock");
+  }
+  if (isHypervisor()) {
+    // TODO: Choose machine
+    return path.join(process.env.HOME, ".local/share/containers/podman/machine/podman-machine-default/podman.sock");
   }
   return "/tmp/podman.sock";
 }

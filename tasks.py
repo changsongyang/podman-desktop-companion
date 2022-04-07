@@ -1,3 +1,4 @@
+import platform
 import os
 from pathlib import Path
 
@@ -76,9 +77,14 @@ def build(c, docs=False):
 
 @task
 def bundle(c, docs=False):
+    system = platform.system()
     with c.cd("src/shell"):
-        run_env(c, "npm run electron:package:linux_x86")
-        run_env(c, "npm run electron:package:linux_arm")
+        # if system == "Darwin":
+        #    run_env(c, "npm install dmg-license")
+        #    run_env(c, "npm run electron:package:mac")
+        if system == "Darwin" or system == "Linux":
+            run_env(c, "npm run electron:package:linux_x86")
+            run_env(c, "npm run electron:package:linux_arm")
 
 
 @task

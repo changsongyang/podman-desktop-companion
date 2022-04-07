@@ -21,6 +21,7 @@
     "@podman-desktop-companion/terminal": "file:../../packages/terminal",
     "ajv": "8.10.0",
     "axios": "^0.25.0",
+    "dmg-license": "^1.0.10",
     "electron-cfg": "^1.2.7",
     "electron-context-menu": "^3.1.1",
     "electron-log": "^4.4.6",
@@ -97,8 +98,7 @@
       "icon": "icons/appIcon.svg",
       "target": [
         "AppImage",
-        "rpm",
-        "deb"
+        "flatpak"
       ],
       "category": "Utility"
     }
