@@ -17,6 +17,7 @@ export interface UserConfiguration {
     level: string;
   };
   communication: "api" | "cli";
+  socketPath: string;
 }
 
 export interface UserConfigurationOptions {

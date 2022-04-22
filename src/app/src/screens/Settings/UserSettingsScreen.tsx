@@ -6,7 +6,7 @@ import * as ReactIcon from "@mdi/react";
 import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 
 // project
-import Environment, { LOGGING_LEVELS } from "../../Environment";
+import { LOGGING_LEVELS } from "../../Environment";
 import { AppScreen, AppScreenProps, UserConfigurationOptions } from "../../Types";
 import { ScreenHeader } from "./ScreenHeader";
 import { Native } from "../../Native";
@@ -37,6 +37,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
   const connect = useStoreActions((actions) => actions.connect);
   const setUserConfiguration = useStoreActions((actions) => actions.setUserConfiguration);
+  const [socketPath, setSocketPath] = useState(userConfiguration.socketPath);
   const program = userConfiguration.program;
   const isValid = provisioned && program.currentVersion;
   const onProgramSelectClick = useCallback(
@@ -75,6 +76,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
       }
     },
     [programPaths]
+  );
+  const onSocketPathChange = useCallback(
+    (event: React.FormEvent<HTMLInputElement>) => {
+      const sender = event.currentTarget;
+      setSocketPath(sender.value);
+    },
+    []
   );
   const onConnectClick = useCallback(
     async () => {
@@ -147,6 +155,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
     }
   }
 
+  const isSocketPathChanged = socketPath !== userConfiguration.socketPath;
+
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader currentScreen={ID} />
@@ -211,6 +221,23 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 ) : (
                   <Button icon={IconNames.TICK} title={t("Accept")} />
                 )}
+              </ControlGroup>
+            </FormGroup>
+            <FormGroup
+              helperText={t("Using automatic value")}
+              label={t("Socket path")}
+              labelFor={`${program.name}_socket`}
+              labelInfo={t("(required)")}
+            >
+              <ControlGroup fill={true} vertical={false}>
+                <InputGroup
+                  fill
+                  id={`${program.name}_socket`}
+                  placeholder={"..."}
+                  value={socketPath}
+                  onChange={onSocketPathChange}
+                />
+                <Button icon={IconNames.TICK} text={t("Accept")} title={isSocketPathChanged ? t("Try to use this path") : t("No change detected")} disabled={!isSocketPathChanged} intent={isSocketPathChanged ? Intent.SUCCESS : Intent.NONE} />
               </ControlGroup>
             </FormGroup>
           </div>

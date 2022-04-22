@@ -194,7 +194,7 @@ export class ContainerClient {
   async getImages() {
     return this.withResult<ContainerImage[]>(async () => {
       const result = await this.dataApiDriver.get<ContainerImage[]>("/images/json");
-      return result.data.map((it) => coerceImage(it));
+      return result.ok ? result.data.map((it) => coerceImage(it)) : [];
     });
   }
   async getImage(id: string, opts?: FetchImageOptions) {
@@ -257,8 +257,7 @@ export class ContainerClient {
           all: true
         }
       });
-      console.debug("Containers result is", result);
-      return result.data.map((it) => coerceContainer(it));
+      return result.ok ? result.data.map((it) => coerceContainer(it)) : [];
     });
   }
   async getContainer(id: string, opts?: FetchContainerOptions) {
@@ -369,7 +368,7 @@ export class ContainerClient {
   async getVolumes() {
     return this.withResult<Volume[]>(async () => {
       const result = await this.dataApiDriver.get<Volume[]>("/volumes/json");
-      return result.data;
+      return result.ok ? result.data : [];
     });
   }
   async getVolume(nameOrId: string, opts?: FetchVolumeOptions) {
@@ -411,7 +410,7 @@ export class ContainerClient {
   async getSecrets() {
     return this.withResult<Secret[]>(async () => {
       const result = await this.dataApiDriver.get<Secret[]>("/secrets/json");
-      return result.data;
+      return result.ok ? result.data : [];
     });
   }
   async getSecret(nameOrId: string, opts?: FetchSecretOptions) {

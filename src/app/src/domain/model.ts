@@ -28,7 +28,8 @@ export const createModel = (registry: AppRegistry): AppModel => {
         logging: {
           level: "error"
         },
-        communication: "api"
+        communication: "api",
+        socketPath: ""
       },
     },
     // Actions

@@ -200,7 +200,7 @@ class Backend {
     }
     return current;
   }
-  async getApiSocketPath() {
+  async detectApiSocketPath() {
     let socketPath = "/tmp/podman-desktop-companion-podman-rest-api.sock";
     const engine = await this.getEngine();
     const machine = await this.getVirtualizationMachineName();
@@ -225,6 +225,22 @@ class Backend {
     logger.debug("API socket path for", engine, "is", socketPath);
     return socketPath;
   }
+  setApiSocketPath(value) {
+    return userSettings.set(`program.${this.getProgramName()}.socketPath`, value);
+  }
+  async getApiSocketPath(skipDetect) {
+    let current = userSettings.get(`program.${this.getProgramName()}.socketPath`, "");
+    if (!current && !skipDetect) {
+      // if not found and detection not skipped - try to detect
+      current = await this.detectApiSocketPath();
+      // if found - cache the value
+      if (current) {
+        this.setApiSocketPath(current);
+      }
+    }
+    return current;
+  }
+
   async getDescriptor() {
     return {
       name: await this.getProgramName(),
@@ -236,7 +252,7 @@ class Backend {
   }
   // Check if the API is available
   async getIsApiRunning() {
-    const osType = await this.getOperatingSystemType();
+    const osType = this.getOperatingSystemType();
     const engine = await this.getEngine();
     logger.debug(`Checking if ${engine} API is running - init`);
     let running = false;
@@ -346,7 +362,7 @@ class Backend {
     const config = {
       timeout: 60000,
       socketPath: await this.getApiSocketPath(),
-      baseURL: "http://d/v3.0.0/libpod",
+      baseURL: "http://localhost", // "http://d/v3.0.0/libpod",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json"
@@ -372,7 +388,7 @@ class Backend {
   }
   async execProgram(command) {
     const engine = await this.getEngine();
-    const osType = await this.getOperatingSystemType();
+    const osType = this.getOperatingSystemType();
     const programName = await this.getProgramName();
     const programExec = osType === "Windows_NT" ? `${programName}.exe` : programName;
     let wrapper;
@@ -387,7 +403,7 @@ class Backend {
     return result;
   }
   async execProgramNatively(command, opts) {
-    const osType = await this.getOperatingSystemType();
+    const osType = this.getOperatingSystemType();
     const programName = await this.getProgramName();
     const programExec = osType === "Windows_NT" ? `${programName}.exe` : programName;
     const result = await exec_launcher(programName, command, opts);
@@ -451,7 +467,7 @@ class Backend {
     }
     return {
       machine: await this.getVirtualizationMachineName(),
-      platform: await this.getOperatingSystemType(),
+      platform: this.getOperatingSystemType(),
       connections,
       running,
       system

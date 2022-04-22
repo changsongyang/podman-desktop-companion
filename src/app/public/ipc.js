@@ -19,6 +19,8 @@ async function getProgram() {
 }
 
 async function getUserConfiguration() {
+  const osType = backend.getOperatingSystemType();
+  const socketPath = await backend.getApiSocketPath();
   const options = {
     engine: await backend.getEngine(),
     program: await getProgram(),
@@ -28,7 +30,8 @@ async function getUserConfiguration() {
     path: userSettings.getPath(),
     logging: {
       level: getLevel()
-    }
+    },
+    socketPath: osType === "Windows_NT" ? socketPath : `unix://${socketPath}`,
   };
   return options;
 }
